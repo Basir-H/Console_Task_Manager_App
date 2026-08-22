@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 
 namespace Task_Manager
@@ -13,63 +11,79 @@ namespace Task_Manager
     {
         static void Main(string[] args)
         {
-            string filePath = "tasks.txt";
-
+            
             bool program = true;
-            List<string> tasks = new List<string>();
 
-            if (File.Exists(filePath)) 
-            {
-                string[] loadedTasks = File.ReadAllLines(filePath);
-                tasks = new List<string>(loadedTasks);
-
-            }
-
-            void SaveTasksToFile()
-            {
-                File.WriteAllLines(filePath, tasks);
-            }
+            TaskManager manager = new TaskManager();
+            manager.LoadTasks();
 
 
             //Show All Tasks
-            void ShowTasks() 
+
+            void ShowTasks()
             {
-                
-                    Console.Clear();
-                    Console.WriteLine("======== All Tasks ========");
 
-                    if (tasks.Count == 0)
-                    {
-                        Console.WriteLine("Your task list is completely empty!");
-                        return;
-                    }
+                Console.Clear();
+                Console.WriteLine("======== All Tasks ========");
+                Console.WriteLine();
 
-                    for (int i = 0; i < tasks.Count; i++)
-                    {
-                        Console.WriteLine($"Task {i + 1}: {tasks[i]}, ");
-                    }
-              
+                if (manager.Tasks.Count == 0)
+                {
+                    Console.WriteLine("Your task list is completely empty!");
+                    return;
+                }
+
+                foreach (TaskItem task in manager.Tasks)
+                {
+                    task.DisplayDetails();
+                }
+
             }
 
             //Create a Task
             void CreateTask()
             {
-                    Console.Clear();
+                Console.Clear();
                 while (true)
                 {
                     Console.WriteLine("======== Create a Task ========");
 
-                    Console.Write("Task Name or Press 0 to Exit: ");
+                    Console.WriteLine("1. Work Task");
+                    Console.WriteLine("2. Personal Task");
+
+                    Console.Write("Which Knid of Tasks do you create or Press 0 to Exit: ");
                     string task = Console.ReadLine();
 
                     if(task == "0") { break; }
 
                     if (!string.IsNullOrEmpty(task))
                     {
-                        tasks.Add(task);
-                        SaveTasksToFile();
-                        Console.WriteLine("Task Added Successfully!!");
-                        Console.WriteLine();
+                        if (task == "1")
+                        {
+                            Console.Write("Task Name: ");
+                            string taskName = Console.ReadLine();
+
+                            Console.Write("Task Company: ");
+                            string taskCompany = Console.ReadLine();
+
+                            manager.AddTask(new WorkTask(taskName, taskCompany));
+                            Console.WriteLine("Task Added Successfully!!");
+                        }
+                        else if (task == "2")
+                        {
+                            Console.Write("Task Name: ");
+                            string taskName = Console.ReadLine();
+
+                            Console.Write("Task Person: ");
+                            string taskPerson = Console.ReadLine();
+                            
+                            manager.AddTask(new PersonalTask(taskName, taskPerson));
+                            Console.WriteLine("Task Added Successfully!!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Please Enter a Valid Number (1-2)!!");
+                        }
                     }
                 }
 
@@ -83,33 +97,32 @@ namespace Task_Manager
                     Console.Clear();
                     Console.WriteLine("======== Update a Task ========");
                     ShowTasks();
+                    Console.WriteLine();
                     Console.WriteLine("0 to Exit");
                         
 
                     Console.Write("Which Task Do you Want to Update: ");
 
-                    if(!int.TryParse(Console.ReadLine(), out int taskIndex))
+                    if(!int.TryParse(Console.ReadLine(), out int id))
                     {
-                        Console.WriteLine("Please Enter Valid Number!!!");
+                        Console.WriteLine("Please Enter Valid Id!!!");
                         continue;
                     }
 
-                    if(taskIndex == 0) { break;  }
+                    if(id == 0) { break; }
 
+                    Console.Write("Write the new Task: ");
+                    string title = Console.ReadLine();
 
-                    if(taskIndex - 1 >= 0 && taskIndex - 1 < tasks.Count)
+                    if(manager.UpdateTask(id, title))
                     {
-                        Console.Write("Write the new Task: ");
-                        string newTask = Console.ReadLine();
-
-                        tasks[taskIndex - 1] = newTask;
-                        SaveTasksToFile();
                         Console.WriteLine("Task Updated Successfully!!!");
                     }
                     else
                     {
-                        Console.WriteLine("Invalid Task Index");
+                        Console.WriteLine("Task is not found or Id is invalid");
                     }
+                    
                 }
             }
 
@@ -122,42 +135,44 @@ namespace Task_Manager
                     Console.Clear();
                     Console.WriteLine("======== Delete a Task ========");
 
-
-                    if (tasks.Count == 0)
+                    if (manager.Tasks.Count == 0)
                     {
                         Console.WriteLine("Nothing to delete!!");
                         return;
                     }
+
                     ShowTasks();
 
                     Console.Write("Which Task Do you Want to Delete or Press 0 to Exit: ");
                     
-                    if (!int.TryParse(Console.ReadLine(), out int taskIndex))
+                    if (!int.TryParse(Console.ReadLine(), out int id))
                     {
                         Console.WriteLine("Please Enter a Valid Number!");
                         continue;
                     }
 
-                    if (taskIndex == 0) { break; }
-                    
-                    if (taskIndex - 1 >= 0 && taskIndex - 1 < tasks.Count)
+                    if (id == 0) { break; }
+
+                    Console.WriteLine("Are you sure you want to delete?  1. Yes    2. No");
+
+                    int.TryParse(Console.ReadLine(), out int choice);
+
+                    if (choice == 1)
                     {
-
-                        Console.WriteLine("Are you sure you want to delete?  1. Yes    2. No");
-                        int.TryParse(Console.ReadLine(), out int choice);
-
-                        if (choice == 1)
+                        if (manager.DeleteTask(id))
                         {
-                            tasks.RemoveAt(taskIndex - 1);
-                            SaveTasksToFile();
                             Console.WriteLine("Task Deleted Seccessfully!!");
                         }
-
+                        else
+                        {
+                            Console.WriteLine("Task not Found or Id is invalid");
+                        }
                     }
                 }
 
             }
 
+            // Live Search 
             void LiveSearch()
             {
                 string search = "";
@@ -170,15 +185,13 @@ namespace Task_Manager
                     Console.WriteLine("----------------");
                     Console.WriteLine($"Search: {search}");
 
-                    var results = tasks
-                        .Where(t => t.Contains(search.ToLower()))
-                        .ToList();
+                    var results =  manager.SearchTasks(search); 
 
                     Console.WriteLine("\nResults:");
 
                     foreach (var task in results)
                     {
-                        Console.WriteLine($"- {task}");
+                        Console.WriteLine($"- {task.Title}");
                     }
 
                     Console.WriteLine("\nPress ESC to exit.");
