@@ -91,46 +91,70 @@ namespace Task_Manager
         // load task
         private void Load()
         {
-            if (File.Exists(filePath))
+            
+            if (!File.Exists(filePath)) return;
+
+            string[] loadedTasks = File.ReadAllLines(filePath);
+            if (loadedTasks.Length == 0) return;
+
+            foreach (string loadedTask in loadedTasks)
             {
-                string[] loadedTasks = File.ReadAllLines(filePath);
-
-                if (loadedTasks.Length > 0)
+                try
                 {
-                    foreach (string loadedTask in loadedTasks)
+                    string[] task = loadedTask.Split('|');
+
+                    
+                    if (task.Length != 5)
                     {
-                        string[] task = loadedTask.Split('|');
-
-                        int.TryParse(task[0], out int id);
-                        string type = task[1];
-                        string title = task[2];
-                        bool status = Convert.ToBoolean(task[4]);
-
-                        TaskItem taskItem;
-
-                        if (type == "Work")
-                        {
-                            string company = task[3];
-                            taskItem = new WorkTask(title, company, status);
-                        }
-                        else if (type == "Personal")
-                        {
-                            string person = task[3];
-                            taskItem = new PersonalTask(title, person, status);
-                        }
-                        else
-                        {
-                            continue;
-                        }
-
-                        taskItem.SetId(id);
-
-                        tasks.Add(taskItem);
+                        Console.WriteLine("Broken Data: Incorrect column count.");
+                        continue;
                     }
-                }
 
+                    
+                    if (!int.TryParse(task[0], out int id) || id <= 0)
+                    {
+                        Console.WriteLine("Broken Data: Invalid ID.");
+                        continue;
+                    }
+
+                    
+                    if (!bool.TryParse(task[4], out bool status))
+                    {
+                        Console.WriteLine("Broken Data: Invalid status format.");
+                        continue;
+                    }
+
+                    string type = task[1];
+                    string title = task[2];
+                    TaskItem taskItem;
+
+                    
+                    if (type == "Work")
+                    {
+                        string company = task[3];
+                        taskItem = new WorkTask(title, company, status);
+                    }
+                    else if (type == "Personal")
+                    {
+                        string person = task[3];
+                        taskItem = new PersonalTask(title, person, status);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Unknown task type: {type}");
+                        continue;
+                    }
+
+                    taskItem.SetId(id);
+                    tasks.Add(taskItem);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error parsing line: {ex.Message}");
+                }
             }
         }
+
 
     }
 }
