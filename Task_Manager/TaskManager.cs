@@ -10,144 +10,119 @@ namespace Task_Manager
 {
     internal class TaskManager
     {
-        private string filePath = "tasks.txt";
-
-        private List<TaskItem> tasks = new List<TaskItem>();
+        private int nextId = 0;
+        
+        //private List<TaskItem> tasks = new List<TaskItem>();
+        ITaskRepository repository;
 
         private Logger logger = new Logger();
 
         public IReadOnlyList<TaskItem> Tasks
         {
-            get { return tasks; }
+            get { return repository.GetAll(); }
         }
 
-        private int nextId = 0;
+        public TaskManager(ITaskRepository repository)
+        {
+            this.repository = repository;
+
+            var tasks = repository.GetAll();
+
+            if(tasks.Count > 0) 
+            { 
+                nextId = tasks.Max(t => t.Id);
+            }
+        }
+
 
         // Add a Task
         public void AddTask(TaskItem task)
         {
             nextId++;
             task.SetId(nextId);
-            tasks.Add(task);
-            SaveTasks();
+
+            repository.Add(task);
+
             logger.Log($"Task Added: {task.Title}");
         }
 
         // Update a Task
-        public bool UpdateTask(int id, string title)
+        public bool UpdateTask(TaskItem task)
         {
-            if (id > 0) {
+            bool updated = repository.Update(task);
 
-                var taskToUpdate = tasks.Find(t => t.Id == id);
-                if (taskToUpdate != null)
-                {
-                    taskToUpdate.Title = title;
-                    SaveTasks();
-                    logger.Log($"Task Updated: {taskToUpdate.Title}");
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
+            if (updated)
             {
-                return false;
+                logger.Log($"Task Updated: {task.Title}");
             }
 
-            
+            return updated;
         }
 
         // Delete a Task
         public bool DeleteTask(int id)
         {
-            if (id <= 0) { return false; }
+            bool deleted = repository.Delete(id);
 
-            var removedCount = tasks.RemoveAll(t => t.Id == id);
+            if (deleted)
+            {
+                logger.Log($"Task Deleted: {id}");
+            }
 
-            if (removedCount == 0) { return false; }
-
-            SaveTasks();
-            logger.Log($"Task Deleted: {id}");
-            return true;
+            return deleted;
         }
-
 
         // Search Tasks
         public IReadOnlyList<TaskItem> SearchTasks(string search)
         {
-            return tasks
+            return repository.GetAll()
                 .Where(task => task.Title.ToLower().Contains(search.ToLower()))
                 .ToList();
         }
 
-        
-        //save tasks to file
-        public void SaveTasks()
+        // mark as complete
+        public bool CompleteTask(int id)
         {
-            var taskItem = tasks.Select(task =>
+            
+            var taskToComplete = repository.GetAll().FirstOrDefault(t => t.Id == id);
+
+            if(taskToComplete == null) { return false; }
+
+            taskToComplete.MarkAsComplete();
+
+            bool completed = repository.SaveMarkAsComplete();
+            
+            if (completed)
             {
-                if (task is WorkTask workTask)
-                {
-                    return $"{workTask.Id}|Work|{workTask.Title}|{workTask.Company}";
-                }
+                logger.Log($"Task Completed: {taskToComplete.Title}");
+            }
 
-                if (task is PersonalTask personalTask)
-                {
-                    return $"{personalTask.Id}|Personal|{personalTask.Title}|{personalTask.Person}";
-                }
-
-                return "";
-
-            }).ToList();
-
-            File.WriteAllLines(filePath, taskItem);
+            return completed;
         }
 
-        // load task
-        public void LoadTasks()
+        public IReadOnlyList<TaskItem> FilterStatus(int choice)
         {
-            if (File.Exists(filePath))
+            if (choice == 1)
             {
-                string[] loadedTasks = File.ReadAllLines(filePath);
+                var tasks = repository.GetAll();
+             
+                return tasks;
 
-                if (loadedTasks.Length > 0)
-                {
-                    foreach (string loadedTask in loadedTasks)
-                    {
-                        string[] task = loadedTask.Split('|');
+            }
+            else if (choice == 2)
+            {
+                var tasks = repository.GetAll()
+                    .Where(task => task.IsCompleted).ToList();
 
-                        int.TryParse(task[0], out int id);
-                        string type = task[1];
-                        string title = task[2];
+                return tasks;
 
-                        TaskItem taskItem;
+            }
+            else
+            {
+                var tasks = repository.GetAll()
+                    .Where(task => !task.IsCompleted).ToList();
 
-                        if(type == "Work")
-                        {
-                            string company = task[3];
-                            taskItem = new WorkTask(title, company);
-                        }
-                        else if(type == "Personal")
-                        {
-                            string person = task[3];
-                            taskItem = new PersonalTask(title, person);
-                        }
-                        else
-                        {
-                             continue; 
-                        }
-
-                        taskItem.SetId(id);
-
-                        tasks.Add(taskItem);
-                    }
-                    if(tasks.Count > 0)
-                    {
-                        nextId = tasks.Max(t => t.Id);
-                    }
-                }
+                return tasks;
 
             }
         }

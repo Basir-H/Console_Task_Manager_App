@@ -18,11 +18,36 @@ namespace Task_Manager
 
         public override void DisplayDetails()
         {
-            Console.WriteLine($"{Id}|Personal|{Title}|{Person}");
+
+            Console.WriteLine($"ID       : {Id}");
+            Console.WriteLine($"Type     : Personal");
+            Console.WriteLine($"Title    : {Title}");
+            Console.WriteLine($"Person   : {Person}");
+            Console.WriteLine($"Status   : {(IsCompleted ? "Completed" : "Incomplete")}");
+
+            Console.WriteLine("==============================");
+            Console.WriteLine();
+        }
+
+        public override void UpdateFrom(TaskItem other)
+        {
+            if(!(other is PersonalTask personalTask))
+            {
+                throw new ArgumentException("Invalid task type for update.");
+            }
+
+            Title = personalTask.Title;
+            Person = personalTask.Person;
         }
 
         public PersonalTask(string title, string person)
             :base(title)
+        {
+            Person = person;
+        }
+
+        public PersonalTask(string title, string person, bool isCompleted)
+            : base(title, isCompleted)
         {
             Person = person;
         }

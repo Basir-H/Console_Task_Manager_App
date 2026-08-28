@@ -18,11 +18,36 @@ namespace Task_Manager
 
         public override void DisplayDetails()
         {
-            Console.WriteLine($"{Id}|Work|{Title}|{Company}");
+
+            Console.WriteLine($"ID       : {Id}");
+            Console.WriteLine($"Type     : Work");
+            Console.WriteLine($"Title    : {Title}");
+            Console.WriteLine($"Company  : {Company}");
+            Console.WriteLine($"Status   : {(IsCompleted ? "Completed" : "Incomplete")}");
+
+            Console.WriteLine("==============================");
+            Console.WriteLine();
+        }
+
+        public override void UpdateFrom(TaskItem other)
+        {
+            if(!(other is WorkTask workTask))
+            {
+                throw new ArgumentException("Invalid task type for update.");
+            }
+            
+            Title = workTask.Title;
+            Company = workTask.Company;            
         }
 
         public WorkTask(string title, string company) 
             : base(title)
+        {
+            Company = company;
+        }
+
+        public WorkTask(string title, string company, bool isCompleted)
+            : base(title, isCompleted)
         {
             Company = company;
         }

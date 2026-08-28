@@ -14,12 +14,11 @@ namespace Task_Manager
             
             bool program = true;
 
-            TaskManager manager = new TaskManager();
-            manager.LoadTasks();
-
+            ITaskRepository repository = new FileTaskRepository();
+            
+            TaskManager manager = new TaskManager(repository);
 
             //Show All Tasks
-
             void ShowTasks()
             {
 
@@ -32,6 +31,11 @@ namespace Task_Manager
                     Console.WriteLine("Your task list is completely empty!");
                     return;
                 }
+
+                Console.WriteLine("==============================");
+                Console.WriteLine("Task Details");
+                Console.WriteLine("==============================");
+                Console.WriteLine();
 
                 foreach (TaskItem task in manager.Tasks)
                 {
@@ -111,24 +115,63 @@ namespace Task_Manager
 
                     if(id == 0) { break; }
 
-                    Console.Write("Write the new Task: ");
-                    string title = Console.ReadLine();
+                    var foundTask =  manager.Tasks.FirstOrDefault(t => t.Id == id);
 
-                    if(manager.UpdateTask(id, title))
+                    if (foundTask == null)
                     {
-                        Console.WriteLine("Task Updated Successfully!!!");
+                        Console.WriteLine("Task Not Found");
+                        continue;
+                    }
+
+
+                    if (foundTask is WorkTask)
+                    {
+                        Console.Write("Write the new task title: ");
+                        string title = Console.ReadLine();
+
+                        Console.Write("Write the new task company: ");
+                        string company = Console.ReadLine();
+
+                        TaskItem task = new WorkTask(title, company);
+                        task.SetId(id);
+
+                        if (manager.UpdateTask(task))
+                        {
+                            Console.WriteLine("Task Updated Successfully!!!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Task is not found or Id is invalid");
+                        }
+
                     }
                     else
                     {
-                        Console.WriteLine("Task is not found or Id is invalid");
+                        Console.Write("Write the new task title: ");
+                        string title = Console.ReadLine();
+
+                        Console.Write("Write the new task person: ");
+                        string person = Console.ReadLine();
+
+                        TaskItem task = new PersonalTask(title, person);
+                        task.SetId(id);
+
+                        if (manager.UpdateTask(task))
+                        {
+                            Console.WriteLine("Task Updated Successfully!!!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Task is not found or Id is invalid");
+                        }
                     }
-                    
+
                 }
             }
 
-            
-            //Delete a Task
-            void DeleteTask()
+
+                //Delete a Task
+                void DeleteTask()
             {
                 while (true)
                 {
@@ -218,6 +261,106 @@ namespace Task_Manager
                 }
             }
 
+            //mark as complete
+            void MarkComplete()
+            {
+                while (true)
+                {
+                    Console.Clear();
+                    Console.WriteLine("======== Mark as Complete ========");
+                    ShowTasks();
+                    Console.WriteLine();
+                    Console.WriteLine("0 to Exit");
+
+
+                    Console.Write("Which Task Do you Want to mark it as Complete: ");
+
+                    if (!int.TryParse(Console.ReadLine(), out int id))
+                    {
+                        Console.WriteLine("Please Enter Valid Id!!!");
+                        continue;
+                    }
+
+                    if (id == 0) { break; }
+
+                    var foundTask = manager.Tasks.FirstOrDefault(t => t.Id == id);
+
+                    if (foundTask == null)
+                    {
+                        Console.WriteLine("Task Not Found");
+                        continue;
+                    }
+
+                    if (manager.CompleteTask(id))
+                    {
+                        Console.WriteLine("Task Completed!!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unsuccessful Mark as Complete ");
+                    }
+
+                }
+            }
+
+            //Filter Task by Status
+            void FilterTask()
+            {
+                while (true)
+                {
+                    Console.Clear();
+                    Console.WriteLine("======== Filter Task by Status ========");
+
+                    Console.WriteLine();
+
+                    Console.WriteLine("1. All Tasks");
+                    Console.WriteLine("2. Completed Tasks");
+                    Console.WriteLine("3. Incompleted Tasks");
+                    
+                    Console.WriteLine();
+
+                    Console.Write("What Status Do you want or press 0 to exit: ");
+
+
+                    if (!int.TryParse(Console.ReadLine(), out int choice))
+                    {
+                        Console.WriteLine("Please Enter Valid Id!!!");
+                        continue;
+                    }
+                    Console.WriteLine();
+
+                    if (choice == 0) { break; }
+
+                    switch (choice)
+                    {
+                        case 1:
+                        case 2: 
+                        case 3:
+                            var filteredTasks = manager.FilterStatus(choice);
+
+                            if(filteredTasks == null) 
+                            { 
+                                Console.WriteLine("No Task Founed");
+                                break;
+                            }
+                            
+                            foreach(var task in filteredTasks)
+                            {
+                                task.DisplayDetails();
+                            }
+                            Console.ReadLine();
+                            
+                            break;
+
+                        default:
+                            Console.WriteLine("Enter valid choice");
+                            break;
+                    }
+                }
+            }
+
+
+
             // Exit The program 
             void Exit()
             {
@@ -238,7 +381,7 @@ namespace Task_Manager
             
             while (program) 
             {
-                Console.WriteLine("\n1. Show All Tasks\n2. Create a Task\n3. Update a Task\n4. Delete a Task\n5. Search a Task\n6. Exit the Program\n");
+                Console.WriteLine("\n1. Show All Tasks\n2. Create a Task\n3. Update a Task\n4. Delete a Task\n5. Search a Task\n6. Mark a Task as Complete\n7. Filter Task Status\n8. Exit the Program\n");
 
                 Console.WriteLine();
 
@@ -262,10 +405,14 @@ namespace Task_Manager
 
                     case 5: LiveSearch(); break;
 
-                    case 6: Exit(); break;
+                    case 6: MarkComplete(); break;
+
+                    case 7: FilterTask(); break;
+
+                    case 8: Exit(); break;
 
                     default:
-                        Console.WriteLine("Enter a Valid Number (1-6)"); break;
+                        Console.WriteLine("Enter a Valid Number (1-8)"); break;
                 }
 
 
